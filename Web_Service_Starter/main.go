@@ -32,14 +32,23 @@ func greetHandler(w http.ResponseWriter, r *http.Request) {
 
 // function called Hello World
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, "Hello, World!")
 	})
 
-	http.HandleFunc("/greet/", func(w http.ResponseWriter, r *http.Request) {
-		name := r.URL.Path[len("/greet/"):]
-		fmt.Fprintf(w, "Hello, %s!", name)
-	})
+	mux.HandleFunc("/greet/", greetHandler)
 
-	http.ListenAndServe(":8081", nil)
+	server := &http.Server{
+		Addr:         ":8081",
+		Handler:      loggingMiddleware(mux),
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	err := server.ListenAndServe()
+	if err != nil {
+		fmt.Println(err)
+	}
 }
