@@ -17,7 +17,7 @@ func main() {
 
 	// Test handler
 	api.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("App running")
+		return c.SendString("App running. You can call APIs")
 	})
 
 	log.Fatal(app.Listen(":8080"))
