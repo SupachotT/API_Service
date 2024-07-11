@@ -1,13 +1,16 @@
-# Format to GET or POST in PowerShell using Crul.exe
+# This project is for create Restful API
 
-## GET
+
+## Format to GET or POST in PowerShell using Crul.exe
+
+### GET
 
 ```
 curl.exe http://localhost:8080/albums `
     --header "Content-Type: application/json" `
     --request "GET"
 ```
-## POST
+### POST
 
 ``` 
 curl.exe http://localhost:8080/albums `
