@@ -1,4 +1,5 @@
-# Format to GET or POST in PowerShell
+# Format to GET or POST in PowerShell using Crul.exe
+
 ## GET
 
 ```
