@@ -16,7 +16,7 @@ Reference form **[This](https://youtu.be/Y7a0sNKdoQk?si=j9jtPJX2drl7oB90)**.
 3. Create Database server and connect to server
 
     ```
-    docker -ti pg-container createdb -U postgres gopgtest    
+    docker exec -ti pg-container createdb -U postgres gopgtest    
     ```
     After that connect to database server with
 
