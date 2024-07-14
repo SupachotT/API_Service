@@ -26,4 +26,4 @@ Reference form **[This](https://youtu.be/Y7a0sNKdoQk?si=j9jtPJX2drl7oB90)**.
 
 4. Others
 
-    for check that it connected to database with sql command  `\c` and `\q` for exit from databases
+    for check that it connected to database with sql command  `\c` or `\q` for exit from databases or `\dt` for see the list of relations
