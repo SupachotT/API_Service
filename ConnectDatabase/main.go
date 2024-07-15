@@ -22,6 +22,7 @@ type Customer struct {
 
 func main() {
 	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
+	// UserName, Password, HostName, dbName
 
 	db, err := sql.Open("postgres", connStr)
 
