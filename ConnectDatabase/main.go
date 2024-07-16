@@ -10,6 +10,7 @@ import (
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/lib/pq"
 	_ "github.com/lib/pq"
 )
 
@@ -55,9 +56,10 @@ func main() {
 	router := mux.NewRouter()
 
 	// Define API endpoints
-	router.HandleFunc("/customers", getCustomersHandler).Methods("GET")
-	router.HandleFunc("/customers/{id}", getCustomerByIDHandler).Methods("GET")
-	router.HandleFunc("/customers/{id}", updateCustomerHandler).Methods("PUT")
+	router.HandleFunc("/customers/all", getCustomers).Methods("GET")
+	router.HandleFunc("/customers/{id}", getCustomerByID).Methods("GET")
+	router.HandleFunc("/customers/create", createCustomer).Methods("POST")
+	router.HandleFunc("/customers/update/{id}", updateCustomer).Methods("PUT")
 
 	// Start server
 	log.Fatal(http.ListenAndServe(":8080", router))
@@ -89,7 +91,6 @@ func InsertLoanCustomer(db *sql.DB, customer Customer) int {
 		log.Fatal(err)
 	}
 	return pk
-
 }
 
 func readCustomersFromFile(filename string) ([]Customer, error) {
@@ -108,7 +109,7 @@ func readCustomersFromFile(filename string) ([]Customer, error) {
 	return customers, nil
 }
 
-func getCustomersHandler(w http.ResponseWriter, r *http.Request) {
+func getCustomers(w http.ResponseWriter, r *http.Request) {
 	// connect databases
 	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
 
@@ -146,7 +147,7 @@ func getCustomersHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(customers)
 }
 
-func getCustomerByIDHandler(w http.ResponseWriter, r *http.Request) {
+func getCustomerByID(w http.ResponseWriter, r *http.Request) {
 	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
 
 	db, err := sql.Open("postgres", connStr)
@@ -185,7 +186,60 @@ func getCustomerByIDHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(customer)
 }
 
-func updateCustomerHandler(w http.ResponseWriter, r *http.Request) {
+func createCustomer(w http.ResponseWriter, r *http.Request) {
+	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
+
+	// Connect to PostgreSQL
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Decode JSON request body into a Customer struct
+	var customer Customer
+	err = json.NewDecoder(r.Body).Decode(&customer)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	// Insert query
+	query := `INSERT INTO customers (first_name, last_name, phone, email) VALUES ($1, $2, $3, $4) RETURNING customer_id`
+	var customerID int
+	err = db.QueryRow(query, customer.First_name, customer.Last_name, customer.Phone, customer.Email).Scan(&customerID)
+	if err != nil {
+		pgErr, ok := err.(*pq.Error)
+		if ok && pgErr.Code.Name() == "unique_violation" {
+			// If the error is due to duplicate email, return a specific JSON response
+			errorResponse := map[string]string{
+				"error": fmt.Sprintf("Email '%s' already exists", customer.Email),
+			}
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(http.StatusConflict) // HTTP 409 Conflict
+			json.NewEncoder(w).Encode(errorResponse)
+			return
+		}
+
+		// For other errors, return a generic internal server error
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Prepare success message
+	successMessage := map[string]interface{}{
+		"message":     "Customer created successfully",
+		"customer_id": customerID,
+	}
+
+	// Set Content-Type and return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated) // HTTP 201 Created
+	json.NewEncoder(w).Encode(successMessage)
+}
+
+func updateCustomer(w http.ResponseWriter, r *http.Request) {
 	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
 
 	db, err := sql.Open("postgres", connStr)
