@@ -59,8 +59,10 @@ func main() {
 	router.HandleFunc("/customers/{id}", getCustomerByID).Methods("GET")
 	router.HandleFunc("/customers/create", createCustomer).Methods("POST")
 	router.HandleFunc("/customers/update/{id}", updateCustomer).Methods("PUT")
+	router.HandleFunc("/customers/delete/{id}", deleteCustomer).Methods("DELETE")
 
 	// Start server
+	fmt.Println("Server listening on port 8080...")
 	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
@@ -287,5 +289,49 @@ func updateCustomer(w http.ResponseWriter, r *http.Request) {
 	// Return success message
 	w.WriteHeader(http.StatusOK)
 	successMessage := map[string]string{"message": fmt.Sprintf("Customer with ID %d updated successfully", id)}
+	json.NewEncoder(w).Encode(successMessage)
+}
+
+func deleteCustomer(w http.ResponseWriter, r *http.Request) {
+	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Get customer_id from URL parameters
+	vars := mux.Vars(r)
+	idStr := vars["id"]
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Error(w, "Invalid customer ID", http.StatusBadRequest)
+		return
+	}
+
+	// Delete query
+	query := `DELETE FROM customers WHERE customer_id = $1`
+	result, err := db.Exec(query, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Check if any rows were affected
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		// Return JSON error response if no customer with the given ID was found to delete
+		errorResponse := map[string]string{"error": "Customer ID not found or no delete performed"}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		json.NewEncoder(w).Encode(errorResponse)
+		return
+	}
+
+	// Return success message
+	w.WriteHeader(http.StatusOK)
+	successMessage := map[string]string{"message": fmt.Sprintf("Customer with ID %d deleted successfully", id)}
 	json.NewEncoder(w).Encode(successMessage)
 }
