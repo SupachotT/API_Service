@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -38,16 +39,17 @@ func main() {
 
 	createLoanCustomerTable(db)
 
-	// Corrected customer data initialization
-	customer := Customer{
-		First_name: "Benjamin",
-		Last_name:  "Franklin",
-		Phone:      "034-591201",
-		Email:      "admin3@loomsoom.go.th",
+	// Read data from JSON file
+	customers, err := readCustomersFromFile("Json/customers.json")
+	if err != nil {
+		log.Fatal(err)
 	}
-	pk := InsertLoanCustomer(db, customer)
 
-	fmt.Printf("Created ID = %d\n  Successfully ", pk)
+	// Insert each customer into the database
+	for _, customer := range customers {
+		pk := InsertLoanCustomer(db, customer)
+		fmt.Printf("Inserted customer with ID = %d\n", pk)
+	}
 
 	router := mux.NewRouter()
 
@@ -85,6 +87,22 @@ func InsertLoanCustomer(db *sql.DB, customer Customer) int {
 	}
 	return pk
 
+}
+
+func readCustomersFromFile(filename string) ([]Customer, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var customers []Customer
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&customers); err != nil {
+		return nil, err
+	}
+
+	return customers, nil
 }
 
 func getCustomersHandler(w http.ResponseWriter, r *http.Request) {
