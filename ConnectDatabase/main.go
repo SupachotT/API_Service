@@ -197,7 +197,8 @@ func updateCustomerHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Get customer_id from URL parameters
 	vars := mux.Vars(r)
-	id, err := strconv.Atoi(vars["id"])
+	idStr := vars["id"]
+	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		http.Error(w, "Invalid customer ID", http.StatusBadRequest)
 		return
@@ -213,16 +214,20 @@ func updateCustomerHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Update query
 	query := `UPDATE customers SET first_name = $2, last_name = $3, phone = $4, email = $5 WHERE customer_id = $1`
-	_, err = db.Exec(query, id, customer.First_name, customer.Last_name, customer.Phone, customer.Email)
-	if err == sql.ErrNoRows {
-		// Return JSON error response if no customer with the given ID exists
-		errorResponse := map[string]string{"error": "Customer not found"}
+	result, err := db.Exec(query, id, customer.First_name, customer.Last_name, customer.Phone, customer.Email)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Check if any rows were affected
+	rowsAffected, _ := result.RowsAffected()
+	if rowsAffected == 0 {
+		// Return JSON error response if no customer with the given ID was found to update
+		errorResponse := map[string]string{"error": "Customer ID not found or no update performed"}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusNotFound)
 		json.NewEncoder(w).Encode(errorResponse)
-		return
-	} else if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
