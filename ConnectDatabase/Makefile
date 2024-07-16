@@ -27,5 +27,8 @@ createDB:
 joinDB:
 	docker exec -ti pg-container psql -U postgres
 
-go:
+run:
 	go run ./main.go
+
+clearData:
+	go run .\Json\clear_data.go
