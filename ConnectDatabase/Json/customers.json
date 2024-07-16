@@ -10,5 +10,23 @@
         "last_name": "Smith",
         "phone": "987-654321",
         "email": "jane.smith@example.com"
+    },
+    {
+        "first_name": "Michael",
+        "last_name": "Johnson",
+        "phone": "555-123456",
+        "email": "michael.johnson@example.com"
+    },
+    {
+        "first_name": "Emily",
+        "last_name": "Davis",
+        "phone": "333-987654",
+        "email": "emily.davis@example.com"
+    },
+    {
+        "first_name": "David",
+        "last_name": "Brown",
+        "phone": "777-654321",
+        "email": "david.brown@example.com"
     }
 ]
