@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 
 	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
@@ -55,6 +56,7 @@ func main() {
 
 	// Define API endpoints
 	router.HandleFunc("/customers", getCustomersHandler).Methods("GET")
+	router.HandleFunc("/customers/{id}", getCustomerByIDHandler).Methods("GET")
 
 	// Start server
 	log.Fatal(http.ListenAndServe(":8080", router))
@@ -141,4 +143,36 @@ func getCustomersHandler(w http.ResponseWriter, r *http.Request) {
 	// Return JSON response
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(customers)
+}
+
+func getCustomerByIDHandler(w http.ResponseWriter, r *http.Request) {
+	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// Get customer_id from URL parameters
+	vars := mux.Vars(r)
+	id, err := strconv.Atoi(vars["id"])
+	if err != nil {
+		http.Error(w, "Invalid customer ID", http.StatusBadRequest)
+		return
+	}
+
+	// Query database for customer with given customer_id
+	var customer Customer
+	query := `SELECT customer_id, first_name, last_name, phone, email, created_at FROM customers WHERE customer_id = $1`
+	err = db.QueryRow(query, id).Scan(&customer.Customer_id, &customer.First_name, &customer.Last_name, &customer.Phone, &customer.Email, &customer.Created_at)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(customer)
 }
