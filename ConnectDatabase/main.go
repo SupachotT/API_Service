@@ -2,17 +2,22 @@ package main
 
 import (
 	"database/sql"
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 
+	"github.com/gorilla/mux"
 	_ "github.com/lib/pq"
 )
 
 type Customer struct {
-	First_name string
-	Last_name  string
-	Phone      string
-	Email      string
+	Customer_id int
+	First_name  string
+	Last_name   string
+	Phone       string
+	Email       string
+	Created_at  string
 }
 
 func main() {
@@ -33,10 +38,24 @@ func main() {
 
 	createLoanCustomerTable(db)
 
-	customer := Customer{"Benjamin", "Franklin", "034-591201", "admin@loomsoom.go.th"}
+	// Corrected customer data initialization
+	customer := Customer{
+		First_name: "Benjamin",
+		Last_name:  "Franklin",
+		Phone:      "034-591201",
+		Email:      "admin3@loomsoom.go.th",
+	}
 	pk := InsertLoanCustomer(db, customer)
 
-	fmt.Printf("ID = %d\n", pk)
+	fmt.Printf("Created ID = %d\n  Successfully ", pk)
+
+	router := mux.NewRouter()
+
+	// Define API endpoints
+	router.HandleFunc("/customers", getCustomersHandler).Methods("GET")
+
+	// Start server
+	log.Fatal(http.ListenAndServe(":8080", router))
 }
 
 func createLoanCustomerTable(db *sql.DB) {
@@ -66,4 +85,42 @@ func InsertLoanCustomer(db *sql.DB, customer Customer) int {
 	}
 	return pk
 
+}
+
+func getCustomersHandler(w http.ResponseWriter, r *http.Request) {
+	// connect databases
+	connStr := "postgres://postgres:secret@localhost:5432/gopgtest?sslmode=disable"
+
+	db, err := sql.Open("postgres", connStr)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer db.Close()
+
+	// query from table customer
+	rows, err := db.Query("SELECT customer_id, first_name, last_name, phone, email, created_at FROM customers")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	var customers []Customer
+	for rows.Next() {
+		var customer Customer
+		if err := rows.Scan(&customer.Customer_id, &customer.First_name, &customer.Last_name, &customer.Phone, &customer.Email, &customer.Created_at); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		customers = append(customers, customer)
+	}
+	if err := rows.Err(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	// Return JSON response
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(customers)
 }
